@@ -6,7 +6,7 @@
 }
 
 nav{
-	background: #1a237e;
+	background: #263238;
 	width: 100%;
 	margin: 0;
 	padding: 0 15px;
@@ -26,5 +26,25 @@ nav{
 	line-height: 40px!important;
 }
 
+.confirmation{
+	width: 50%;
+	margin: auto;
+	margin-top: 50px;
+}
 
+.thanks-message i{
+	color: #4caf50;
+	width: 20%;
+	display: block;
+	float: left;
+}
+
+.thanks-message p{
+	font-size: 1.5em;
+	font-weight: 600;
+	float: left;
+	display: block;
+	width: 80%;
+	margin-top: 30px;
+}
 
