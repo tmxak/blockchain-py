@@ -20,17 +20,14 @@ class Blockchain:
     def register_node(self, address):
         """
         Add a new node to the list of nodes
-
         :param address: Address of node. Eg. 'http://192.168.0.5:5000'
         """
-
         parsed_url = urlparse(address)
         self.nodes.add(parsed_url.netloc)
 
     def valid_chain(self, chain):
         """
         Determine if a given blockchain is valid
-
         :param chain: A blockchain
         :return: True if valid, False if not
         """
@@ -60,10 +57,8 @@ class Blockchain:
         """
         This is our consensus algorithm, it resolves conflicts
         by replacing our chain with the longest one in the network.
-
         :return: True if our chain was replaced, False if not
         """
-
         neighbours = self.nodes
         new_chain = None
 
@@ -93,7 +88,6 @@ class Blockchain:
     def new_block(self, proof, previous_hash):
         """
         Create a new Block in the Blockchain
-
         :param proof: The proof given by the Proof of Work algorithm
         :param previous_hash: Hash of previous Block
         :return: New Block
@@ -116,7 +110,6 @@ class Blockchain:
     def new_vote(self, userid, voteid, timeid):
         """
         Creates a new vote to go into the next mined Block
-
         :param userid: Address of the userid
         :param voteid: Voteid
         :param timeid: timeid
@@ -138,10 +131,8 @@ class Blockchain:
     def hash(block):
         """
         Creates a SHA-256 hash of a Block
-
         :param block: Block
         """
-
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
@@ -152,7 +143,6 @@ class Blockchain:
          - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
          - p is the previous proof, and p' is the new proof
         """
-
         proof = 0
         while self.valid_proof(last_proof, proof) is False:
             proof += 1
@@ -163,16 +153,13 @@ class Blockchain:
     def valid_proof(last_proof, proof):
         """
         Validates the Proof
-
         :param last_proof: Previous Proof
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
-
 
 # Instantiate the Node
 app = Flask(__name__)
