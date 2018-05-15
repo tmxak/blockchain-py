@@ -4,6 +4,7 @@ from time import time
 from urllib.parse import urlparse
 from uuid import uuid4
 
+import datetime
 import requests
 from flask import Flask, jsonify, request
 
@@ -15,7 +16,7 @@ class Blockchain:
         self.nodes = set()
 
         # Create the genesis block
-        self.new_block(previous_hash='1', proof=100)
+        self.new_block(previous_hash='00000', proof=100)
 
     def register_node(self, address):
         """
@@ -92,22 +93,22 @@ class Blockchain:
         :param previous_hash: Hash of previous Block
         :return: New Block
         """
-
+        block_hash = self.hash(f'{previous_hash}{time()}{proof}{self.current_votes}'.encode())
         block = {
             'index': len(self.chain) + 1,
             'timestamp': time(),
             'votes': self.current_votes,
             'proof': proof,
+            "blockhash": block_hash,
             'previous_hash': previous_hash or self.hash(self.chain[-1]),
         }
 
         # Reset the current list of votes
         self.current_votes = []
-
         self.chain.append(block)
         return block
 
-    def new_vote(self, userid, voteid, timeid):
+    def new_vote(self, userid, voteid):
         """
         Creates a new vote to go into the next mined Block
         :param userid: Address of the userid
@@ -118,7 +119,7 @@ class Blockchain:
         self.current_votes.append({
             'userid': userid,
             'voteid': voteid,
-            'timeid': timeid,
+            'timeid': datetime.datetime.now(),
         })
 
         return self.last_block['index'] + 1
@@ -134,8 +135,8 @@ class Blockchain:
         :param block: Block
         """
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
-        block_string = json.dumps(block, sort_keys=True).encode()
-        return hashlib.sha256(block_string).hexdigest()
+        sha = hashlib.sha256
+        return sha(block).hexdigest()
 
     def proof_of_work(self, last_proof):
         """
@@ -143,23 +144,37 @@ class Blockchain:
          - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
          - p is the previous proof, and p' is the new proof
         """
+        # proof = 0
+        # while self.valid_proof(last_proof, proof) is False:
+        #     proof += 1
+        #
+        # return proof
+        current_block = self.last_block['index'] + 1
+        last_hash = self.hash(last_proof.encode())
         proof = 0
-        while self.valid_proof(last_proof, proof) is False:
+        while self.valid_proof(proof, last_hash, current_block) is False:
             proof += 1
-
         return proof
 
+    # @staticmethod
+    # def valid_proof(last_proof, proof):
+    #     """
+    #     Validates the Proof
+    #     :param last_proof: Previous Proof
+    #     :param proof: Current Proof
+    #     :return: True if correct, False if not.
+    #     """
+    #     guess = f'{last_proof}{proof}'.encode()
+    #     guess_hash = hashlib.sha256(guess).hexdigest()
+    #     return guess_hash[:4] == "0000"
     @staticmethod
-    def valid_proof(last_proof, proof):
-        """
-        Validates the Proof
-        :param last_proof: Previous Proof
-        :param proof: Current Proof
-        :return: True if correct, False if not.
-        """
-        guess = f'{last_proof}{proof}'.encode()
-        guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:4] == "0000"
+    def valid_proof(nonce, last_hash, block):
+        block_string = json.dumps(block, sort_keys=True)
+        guess = f'{nonce}{last_hash}{block_string}'.encode()
+        # guess_hash = hashlib.sha256(guess).hexdigest()
+        guess_hash = blockchain.hash(guess)
+        if guess_hash:
+            return guess_hash[:3] == "000"
 
 # Instantiate the Node
 app = Flask(__name__)
@@ -174,30 +189,33 @@ blockchain = Blockchain()
 @app.route('/mine', methods=['GET'])
 def mine():
     # We run the proof of work algorithm to get the next proof...
-    last_block = blockchain.last_block
-    last_proof = last_block['proof']
-    proof = blockchain.proof_of_work(last_proof)
+    last_block_hash = blockchain.last_block['blockhash']
+    # last_proof = last_block_hash['proof']
+    proof = blockchain.proof_of_work(last_block_hash)
 
     # We must receive a reward for finding the proof.
     # The userid is "0" to signify that this node has mined a new coin.
-    blockchain.new_vote(
-        userid="0",
-        voteid=node_identifier,
-        timeid=1,
-    )
+    # blockchain.new_vote(
+    #     userid="0",
+    #     voteid=node_identifier
+    # )
 
+    if not blockchain.current_votes:
+        return 'No transactions to mine', 200
+    else:
     # Forge the new Block by adding it to the chain
-    previous_hash = blockchain.hash(last_block)
-    block = blockchain.new_block(proof, previous_hash)
+        previous_hash = blockchain.last_block['blockhash']
+        block = blockchain.new_block(proof, previous_hash)
 
-    response = {
-        'message': "New Block Forged",
-        'index': block['index'],
-        'votes': block['votes'],
-        'proof': block['proof'],
-        'previous_hash': block['previous_hash'],
-    }
-    return jsonify(response), 200
+        response = {
+            'message': "New Block Forged",
+            'index': block['index'],
+            'votes': block['votes'],
+            'proof': block['proof'],
+            'previous_hash': block['previous_hash'],
+            'blockhash': block['blockhash']
+        }
+        return jsonify(response), 200
 
 
 @app.route('/votes/new', methods=['POST'])
@@ -205,12 +223,12 @@ def new_vote():
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
-    required = ['userid', 'voteid', 'timeid']
+    required = ['userid', 'voteid']
     if not all(k in values for k in required):
         return 'Missing values', 400
 
     # Create a new Vote
-    index = blockchain.new_vote(values['userid'], values['voteid'], values['timeid'])
+    index = blockchain.new_vote(values['userid'], values['voteid'])
 
     response = {'message': f'Vote will be added to Block {index}'}
     return jsonify(response), 201
