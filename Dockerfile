@@ -14,4 +14,4 @@ RUN apk add --update $BUILD_LIST \
 
 EXPOSE 5000
 
-ENTRYPOINT [ "pipenv", "run", "python", "/app/blockchain.py", "--port", "5000"  ]
+ENTRYPOINT [ "pipenv", "run", "python", "/app/blockchainvote.py", "--port", "5000"  ]

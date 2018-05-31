@@ -156,25 +156,15 @@ class Blockchain:
             proof += 1
         return proof
 
-    # @staticmethod
-    # def valid_proof(last_proof, proof):
-    #     """
-    #     Validates the Proof
-    #     :param last_proof: Previous Proof
-    #     :param proof: Current Proof
-    #     :return: True if correct, False if not.
-    #     """
-    #     guess = f'{last_proof}{proof}'.encode()
-    #     guess_hash = hashlib.sha256(guess).hexdigest()
-    #     return guess_hash[:4] == "0000"
     @staticmethod
     def valid_proof(nonce, last_hash, block):
         block_string = json.dumps(block, sort_keys=True)
         guess = f'{nonce}{last_hash}{block_string}'.encode()
         # guess_hash = hashlib.sha256(guess).hexdigest()
         guess_hash = blockchain.hash(guess)
-        if guess_hash:
-            return guess_hash[:3] == "000"
+        if guess_hash[:3] != "000":
+            return False
+
 
 # Instantiate the Node
 app = Flask(__name__)
